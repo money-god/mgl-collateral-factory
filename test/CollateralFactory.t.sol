@@ -180,7 +180,7 @@ contract CollateralFactoryTest is Test {
     function testDeployCollateralSpecificContracts() public {
         address token = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0; // mainnet WSTETH
         address priceFeed = 0xd0B49e3d0313bb3Cad456B62A99A0BcB366FB6a2; // COLLATERAL_ORACLE_WSTETH
-        address coinOracle = 0x7F9E3bC7c858Bf830906a0BD81F184708cc42260; // SYSTEM_COIN_ORACLE
+        address coinOracle = 0xC8078539f56ae8E0e3741BAa8F8Ed939D63976a8; // SYSTEM_COIN_ORACLE
         address ethOracle = 0x4EdbE53a846087075291fB575e8fFb4b00B1c5E4; // COLLATERAL_ORACLE_ETH
         (
             address joinAddress,
@@ -230,7 +230,7 @@ contract CollateralFactoryTest is Test {
     function testDeployCollateralType() public {
         address token = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0; // mainnet WSTETH
         address priceFeed = 0xd0B49e3d0313bb3Cad456B62A99A0BcB366FB6a2; // COLLATERAL_ORACLE_WSTETH
-        address coinOracle = 0x7F9E3bC7c858Bf830906a0BD81F184708cc42260; // SYSTEM_COIN_ORACLE
+        address coinOracle = 0xC8078539f56ae8E0e3741BAa8F8Ed939D63976a8; // SYSTEM_COIN_ORACLE
         address ethOracle = 0x4EdbE53a846087075291fB575e8fFb4b00B1c5E4; // COLLATERAL_ORACLE_ETH
         (
             address joinAddress,
