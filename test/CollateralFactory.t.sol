@@ -192,7 +192,8 @@ contract CollateralFactoryTest is Test {
                 token,
                 priceFeed,
                 coinOracle,
-                ethOracle
+                ethOracle,
+                50 // 5% deviation
             );
 
         JoinLike join = JoinLike(joinAddress);
@@ -241,7 +242,8 @@ contract CollateralFactoryTest is Test {
                 token,
                 priceFeed,
                 coinOracle,
-                ethOracle
+                ethOracle,
+                50 // 5% deviation
             );
 
         factory.deployCollateralType(

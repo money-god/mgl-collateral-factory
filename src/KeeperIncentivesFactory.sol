@@ -12,7 +12,8 @@ contract KeeperIncentivesFactory {
         uint256 delay_,
         address coinOracle_,
         address ethOracle_,
-        address owner
+        uint256 acceptedDeviation_,
+        address owner_
     ) external returns (address) {
         BasefeeOSMDeviationCallBundler bundler = new BasefeeOSMDeviationCallBundler(
                 treasury_,
@@ -22,9 +23,10 @@ contract KeeperIncentivesFactory {
                 reward_,
                 delay_,
                 coinOracle_,
-                ethOracle_
+                ethOracle_,
+                acceptedDeviation_
             );
-        bundler.addAuthorization(owner);
+        bundler.addAuthorization(owner_);
         bundler.removeAuthorization(address(this));            
         return address(bundler);
     }

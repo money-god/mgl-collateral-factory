@@ -28,6 +28,7 @@ abstract contract FactoryLike {
         uint256,
         address,
         address,
+        uint256,
         address
     ) external virtual returns (address);
 }
@@ -97,13 +98,65 @@ contract CollateralFactory {
         keeperIncentivesFactory = FactoryLike(keeperIncentivesFactory_);
     }
 
+    function deployJoin(
+        bytes32 collateralType,
+        address token
+    ) internal returns (address) {
+        return
+            joinFactory.deploy(
+                address(safeEngine),
+                collateralType,
+                token,
+                pauseProxy
+            );
+    }
+
+    function deployAuctionHouse(
+        bytes32 collateralType
+    ) internal returns (address) {
+        return
+            auctionHouseFactory.deploy(
+                address(safeEngine),
+                address(liquidationEngine),
+                collateralType,
+                pauseProxy
+            );
+    }
+
+    function deployOSM(address priceFeed) internal returns (address) {
+        return osmFactory.deploy(priceFeed, pauseProxy);
+    }
+
+    function deployKeeperIncentives(
+        address osm,
+        bytes32 collateralType,
+        address coinOracle,
+        address ethOracle,
+        uint256 acceptedDeviation
+    ) internal returns (address) {
+        return
+            keeperIncentivesFactory.deploy(
+                address(stabilityFeeTreasury),
+                osm,
+                address(oracleRelayer),
+                [collateralType, bytes32(0), bytes32(0)],
+                4 * 10 ** 18,
+                0,
+                coinOracle,
+                ethOracle,
+                acceptedDeviation,
+                pauseProxy
+            );
+    }
+
     // notice: this function can be called by anyone, it will deploy a set of contracts needed for a new collateral (no impact on the system until they are attached)
     function deployCollateralSpecificContracts(
         bytes32 collateralType,
         address token,
         address priceFeed,
         address coinOracle,
-        address ethOracle
+        address ethOracle,
+        uint256 acceptedDeviation
     )
         external
         returns (
@@ -113,35 +166,21 @@ contract CollateralFactory {
             address keeperIncentives
         )
     {
-        join = joinFactory.deploy(
-            address(safeEngine),
-            collateralType,
-            token,
-            pauseProxy
-        );
+        join = deployJoin(collateralType, token);
         emit contractDeployed("JOIN", join);
 
-        auctionHouse = auctionHouseFactory.deploy(
-            address(safeEngine),
-            address(liquidationEngine),
-            collateralType,
-            pauseProxy
-        );
+        auctionHouse = deployAuctionHouse(collateralType);
         emit contractDeployed("AUCTION_HOUSE", auctionHouse);
 
-        osm = osmFactory.deploy(priceFeed, pauseProxy);
+        osm = deployOSM(priceFeed);
         emit contractDeployed("OSM", osm);
 
-        keeperIncentives = keeperIncentivesFactory.deploy(
-            address(stabilityFeeTreasury),
+        keeperIncentives = deployKeeperIncentives(
             osm,
-            address(oracleRelayer),
-            [collateralType, bytes32(0), bytes32(0)],
-            2 * 10 ** 18,
-            0,
+            collateralType,
             coinOracle,
             ethOracle,
-            pauseProxy
+            acceptedDeviation
         );
         emit contractDeployed("KEEPER_INCENTIVES", keeperIncentives);
     }
