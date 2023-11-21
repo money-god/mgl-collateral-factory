@@ -140,7 +140,7 @@ contract CollateralFactory {
                 osm,
                 address(oracleRelayer),
                 [collateralType, bytes32(0), bytes32(0)],
-                4 * 10 ** 18,
+                2 * 10 ** 18,
                 0,
                 coinOracle,
                 ethOracle,

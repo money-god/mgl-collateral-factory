@@ -150,7 +150,7 @@ contract CollateralFactoryTest is Test {
         StabilityFeeTreasuryLike(0xB3c5866f6690AbD50536683994Cc949697a64cd0);
     address public pauseProxy = 0xaDEA80Db702690A80cd123BA7ddCF6F541884E4f;
 
-    function setUp() public {
+    function setUp() public virtual {
         address osmFactory = address(new OSMFactory());
         address joinFactory = address(new JoinFactory());
         address auctionHouseFactory = address(new AuctionHouseFactory());
@@ -346,5 +346,20 @@ contract CollateralFactoryTest is Test {
         );
         assertEq(total, uint(-1));
         assertEq(perBlock, 100 * 10 ** 18);
+    }
+}
+
+contract MainnetDeployTest is CollateralFactoryTest {
+    function setUp() public override {
+        address osmFactory = 0xebb80c260b74F8389536c5514f6F06794A4935B2;
+        address joinFactory = 0x6b8cDDc434272E0b0F295913B5A8CCD199ac491F;
+        address auctionHouseFactory = 0x4A3f50Ee31318bE0234e13244Da413df615901e3;
+        address keeperIncentivesFactory = 0x295D6C315eAb2E23F37b5808c7b1a4a381285db0;
+
+        // mainnet
+        factory = CollateralFactory(0xd8b8fE6B1E3331Ae06fBc41d36813550fd0c7F6E);
+
+        vm.etch(pauseProxy, GetCode.at(address(factory)));
+        factory = CollateralFactory(pauseProxy);
     }
 }
