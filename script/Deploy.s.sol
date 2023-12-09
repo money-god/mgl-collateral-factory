@@ -15,10 +15,10 @@ contract Deploy is Script {
     function run() public {
         vm.startBroadcast();
 
-        address joinFactory = address(new JoinFactory());
-        address auctionHouseFactory = address(new AuctionHouseFactory());
-        address osmFactory = address(new OSMFactory());
-        address keeperIncentivesFactory = 0x295D6C315eAb2E23F37b5808c7b1a4a381285db0; // predeployed, other compiler version
+        address joinFactory = 0x6b8cDDc434272E0b0F295913B5A8CCD199ac491F;
+        address auctionHouseFactory = 0x4A3f50Ee31318bE0234e13244Da413df615901e3;
+        address osmFactory = 0xebb80c260b74F8389536c5514f6F06794A4935B2;
+        address keeperIncentivesFactory = 0x295D6C315eAb2E23F37b5808c7b1a4a381285db0; 
 
 
         // mainnet
