@@ -218,7 +218,7 @@ contract CollateralFactory {
         liquidationEngine.modifyParameters(
             collateralType,
             "liquidationQuantity",
-            90000 * 10 ** 45
+            uint256(-1)
         );
 
         liquidationEngine.addAuthorization(address(auctionHouse));
