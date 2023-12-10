@@ -281,7 +281,7 @@ contract CollateralFactoryTest is Test {
             ) = liquidationEngine.collateralTypes("WSTETH-X");
             assertEq(auctionHouse_, address(auctionHouse));
             assertEq(liquidationPenalty, 1.02e18);
-            assertEq(liquidationQuantity, 90000 * 10 ** 45);
+            assertEq(liquidationQuantity, uint(-1) / 10**27);
         }
 
         assertEq(
@@ -357,7 +357,7 @@ contract MainnetDeployTest is CollateralFactoryTest {
         address keeperIncentivesFactory = 0x295D6C315eAb2E23F37b5808c7b1a4a381285db0;
 
         // mainnet
-        factory = CollateralFactory(0xd8b8fE6B1E3331Ae06fBc41d36813550fd0c7F6E);
+        factory = CollateralFactory(0x4d85da6DBcE6ad53d9A86Bdb96C9F75f1F78b7C3);
 
         vm.etch(pauseProxy, GetCode.at(address(factory)));
         factory = CollateralFactory(pauseProxy);

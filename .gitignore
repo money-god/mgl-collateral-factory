@@ -2,8 +2,8 @@
 cache/
 out/
 
-# Ignores development broadcast logs
-/broadcast
+# Ignores broadcast logs
+broadcast/
 
 # Docs
 docs/
