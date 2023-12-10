@@ -4,8 +4,10 @@ pragma experimental ABIEncoderV2;
 
 import "forge-std/Test.sol";
 import "../src/CollateralFactory.sol";
+import "../src/OSMFactory.sol";
 import "../src/JoinFactory.sol";
 import "../src/AuctionHouseFactory.sol";
+import {KeeperIncentivesFactory} from "./KeeperIncentivesMock.sol";
 
 library GetCode {
     function at(address _addr) public view returns (bytes memory o_code) {
@@ -110,6 +112,28 @@ abstract contract JoinLike is AuthLike {
     function collateralType() external view virtual returns (bytes32);
 }
 
+abstract contract OSMLike is AuthLike {
+    function priceSource() external view virtual returns (address);
+}
+
+abstract contract KeeperIncentivesLike is AuthLike {
+    function treasury() external view virtual returns (address);
+
+    function osm() external view virtual returns (address);
+
+    function oracleRelayer() external view virtual returns (address);
+
+    function coinOracle() external view virtual returns (address);
+
+    function ethOracle() external view virtual returns (address);
+}
+
+abstract contract StabilityFeeTreasuryLike {
+    function getAllowance(
+        address
+    ) external view virtual returns (uint256, uint256);
+}
+
 contract CollateralFactoryTest is Test {
     CollateralFactory public factory;
     SafeEngineLike public safeEngine =
@@ -122,42 +146,117 @@ contract CollateralFactoryTest is Test {
         GlobalSettlementLike(0xeCa7B1F7e98B4ff65002DA43206fD2bE2d3aD0A3);
     TaxCollectorLike public taxCollector =
         TaxCollectorLike(0x3578743e922941911638a01521947ef1a81E0878);
+    StabilityFeeTreasuryLike public stabilityFeeTreasury =
+        StabilityFeeTreasuryLike(0xB3c5866f6690AbD50536683994Cc949697a64cd0);
     address public pauseProxy = 0xaDEA80Db702690A80cd123BA7ddCF6F541884E4f;
 
-    function setUp() public {
+    function setUp() public virtual {
+        address osmFactory = address(new OSMFactory());
         address joinFactory = address(new JoinFactory());
         address auctionHouseFactory = address(new AuctionHouseFactory());
+        address keeperIncentivesFactory = address(
+            new KeeperIncentivesFactory()
+        );
 
         // mainnet
         factory = new CollateralFactory(
+            pauseProxy,
             address(safeEngine),
             address(liquidationEngine),
             address(oracleRelayer),
             address(globalSettlement),
             address(taxCollector),
+            address(stabilityFeeTreasury),
+            osmFactory,
             joinFactory,
-            auctionHouseFactory
+            auctionHouseFactory,
+            keeperIncentivesFactory
         );
 
         vm.etch(pauseProxy, GetCode.at(address(factory)));
         factory = CollateralFactory(pauseProxy);
     }
 
-    function testDeployCollateralType() public {
-        address osm = 0xCb320D54d99250fD8D463B0Fea6785e44e78ce86; // mainnet WSTETH
+    function testDeployCollateralSpecificContracts() public {
         address token = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0; // mainnet WSTETH
-
-        (address joinAddress, address auctionHouseAddress) = factory
-            .deployCollateralType(
-                token,
-                osm,
+        address priceFeed = 0xd0B49e3d0313bb3Cad456B62A99A0BcB366FB6a2; // COLLATERAL_ORACLE_WSTETH
+        address coinOracle = 0xC8078539f56ae8E0e3741BAa8F8Ed939D63976a8; // SYSTEM_COIN_ORACLE
+        address ethOracle = 0x4EdbE53a846087075291fB575e8fFb4b00B1c5E4; // COLLATERAL_ORACLE_ETH
+        (
+            address joinAddress,
+            address auctionHouseAddress,
+            address osmAddress,
+            address keeperIncentivesAddress
+        ) = factory.deployCollateralSpecificContracts(
                 "WSTETH-X",
-                195 * 10 ** 25,
-                10000000 * 10 ** 45,
-                15000 * 10 ** 45,
-                1000000000705562181084137269, // 2.25%
-                1.02e18
+                token,
+                priceFeed,
+                coinOracle,
+                ethOracle,
+                50 // 5% deviation
             );
+
+        JoinLike join = JoinLike(joinAddress);
+        assertEq(join.safeEngine(), address(safeEngine));
+        assertEq(join.collateralType(), bytes32("WSTETH-X"));
+        assertEq(join.collateral(), address(token));
+        assertEq(join.authorizedAccounts(address(this)), 0);
+        assertEq(join.authorizedAccounts(address(pauseProxy)), 1);
+
+        AuctionHouseLike auctionHouse = AuctionHouseLike(auctionHouseAddress);
+        assertEq(auctionHouse.safeEngine(), address(safeEngine));
+        assertEq(auctionHouse.liquidationEngine(), address(liquidationEngine));
+        assertEq(auctionHouse.collateralType(), bytes32("WSTETH-X"));
+        assertEq(auctionHouse.authorizedAccounts(address(this)), 0);
+        assertEq(auctionHouse.authorizedAccounts(address(pauseProxy)), 1);
+
+        OSMLike osm = OSMLike(osmAddress);
+        assertEq(osm.priceSource(), priceFeed);
+        assertEq(osm.authorizedAccounts(address(this)), 0);
+        assertEq(osm.authorizedAccounts(address(pauseProxy)), 1);
+
+        KeeperIncentivesLike incentives = KeeperIncentivesLike(
+            keeperIncentivesAddress
+        );
+        assertEq(incentives.treasury(), address(stabilityFeeTreasury));
+        assertEq(incentives.osm(), address(osm));
+        assertEq(incentives.oracleRelayer(), address(oracleRelayer));
+        assertEq(incentives.coinOracle(), address(coinOracle));
+        assertEq(incentives.ethOracle(), address(ethOracle));
+        assertEq(incentives.authorizedAccounts(address(this)), 0);
+        assertEq(incentives.authorizedAccounts(address(pauseProxy)), 1);
+    }
+
+    function testDeployCollateralType() public {
+        address token = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0; // mainnet WSTETH
+        address priceFeed = 0xd0B49e3d0313bb3Cad456B62A99A0BcB366FB6a2; // COLLATERAL_ORACLE_WSTETH
+        address coinOracle = 0xC8078539f56ae8E0e3741BAa8F8Ed939D63976a8; // SYSTEM_COIN_ORACLE
+        address ethOracle = 0x4EdbE53a846087075291fB575e8fFb4b00B1c5E4; // COLLATERAL_ORACLE_ETH
+        (
+            address joinAddress,
+            address auctionHouseAddress,
+            address osmAddress,
+            address keeperIncentivesAddress
+        ) = factory.deployCollateralSpecificContracts(
+                "WSTETH-X",
+                token,
+                priceFeed,
+                coinOracle,
+                ethOracle,
+                50 // 5% deviation
+            );
+
+        factory.deployCollateralType(
+            joinAddress,
+            osmAddress,
+            auctionHouseAddress,
+            keeperIncentivesAddress,
+            195 * 10 ** 25,
+            10000000 * 10 ** 45,
+            15000 * 10 ** 45,
+            1000000000705562181084137269, // 2.25%
+            1.02e18
+        );
 
         JoinLike join = JoinLike(joinAddress);
         AuctionHouseLike auctionHouse = AuctionHouseLike(auctionHouseAddress);
@@ -182,7 +281,7 @@ contract CollateralFactoryTest is Test {
             ) = liquidationEngine.collateralTypes("WSTETH-X");
             assertEq(auctionHouse_, address(auctionHouse));
             assertEq(liquidationPenalty, 1.02e18);
-            assertEq(liquidationQuantity, 90000 * 10 ** 45);
+            assertEq(liquidationQuantity, uint(-1) / 10**27);
         }
 
         assertEq(
@@ -201,7 +300,7 @@ contract CollateralFactoryTest is Test {
                 uint safetyCRatio,
                 uint liquidationCRatio
             ) = oracleRelayer.collateralTypes("WSTETH-X");
-            assertEq(orcl, address(osm));
+            assertEq(orcl, address(osmAddress));
             assertEq(safetyCRatio, 195 * 10 ** 25);
             assertEq(liquidationCRatio, 195 * 10 ** 25);
         }
@@ -230,7 +329,7 @@ contract CollateralFactoryTest is Test {
         assertEq(updateTime, now);
 
         assertEq(auctionHouse.oracleRelayer(), address(oracleRelayer));
-        assertEq(auctionHouse.collateralFSM(), osm);
+        assertEq(auctionHouse.collateralFSM(), osmAddress);
         assertEq(auctionHouse.minimumBid(), 0);
         assertEq(
             auctionHouse.perSecondDiscountUpdateRate(),
@@ -241,5 +340,26 @@ contract CollateralFactoryTest is Test {
         assertEq(auctionHouse.maxDiscountUpdateRateTimeline(), 7 days);
         assertEq(auctionHouse.lowerCollateralMedianDeviation(), 0.70E18);
         assertEq(auctionHouse.upperCollateralMedianDeviation(), 0.90E18);
+
+        (uint total, uint perBlock) = stabilityFeeTreasury.getAllowance(
+            keeperIncentivesAddress
+        );
+        assertEq(total, uint(-1));
+        assertEq(perBlock, 100 * 10 ** 18);
+    }
+}
+
+contract MainnetDeployTest is CollateralFactoryTest {
+    function setUp() public override {
+        address osmFactory = 0xebb80c260b74F8389536c5514f6F06794A4935B2;
+        address joinFactory = 0x6b8cDDc434272E0b0F295913B5A8CCD199ac491F;
+        address auctionHouseFactory = 0x4A3f50Ee31318bE0234e13244Da413df615901e3;
+        address keeperIncentivesFactory = 0x295D6C315eAb2E23F37b5808c7b1a4a381285db0;
+
+        // mainnet
+        factory = CollateralFactory(0x4d85da6DBcE6ad53d9A86Bdb96C9F75f1F78b7C3);
+
+        vm.etch(pauseProxy, GetCode.at(address(factory)));
+        factory = CollateralFactory(pauseProxy);
     }
 }

@@ -7,3 +7,6 @@
 [submodule "lib/geb"]
 	path = lib/geb
 	url = https://github.com/money-god/geb
+[submodule "lib/mgl-keeper-incentives"]
+	path = lib/mgl-keeper-incentives
+	url = https://github.com/money-god/mgl-keeper-incentives
